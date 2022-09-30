@@ -40,6 +40,6 @@ variable "branch" {
 
 variable "target_path" {
   type        = string
-  default     = "clusters/staging-cluster"
+  default     = "clusters/staging-cluster/base"
   description = "flux sync target path"
 }

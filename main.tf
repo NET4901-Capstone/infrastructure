@@ -53,7 +53,7 @@ module "kubernetes-flux" {
   github_token     = var.github_token
   github_owner     = "NET4901-Capstone"
   repository_name  = "cluster-config"
-  target_path      = "clusters/${var.cluster_name}"
+  target_path      = "clusters/${var.cluster_name}/base"
 
   write_kubeconfig = var.write_kubeconfig
 
