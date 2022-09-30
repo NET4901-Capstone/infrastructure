@@ -67,22 +67,6 @@ locals {
   known_hosts = "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg="
 }
 
-resource "tls_private_key" "main" {
-  algorithm   = "ECDSA"
-  ecdsa_curve = "P256"
-}
-
-# Flux
-data "flux_install" "main" {
-  target_path = var.target_path
-}
-
-data "flux_sync" "main" {
-  target_path = var.target_path
-  url         = "ssh://git@github.com/${var.github_owner}/${var.repository_name}.git"
-  branch      = var.branch
-}
-
 # Kubernetes
 resource "kubernetes_namespace" "flux_system" {
   metadata {

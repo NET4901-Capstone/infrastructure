@@ -1,63 +1,94 @@
-terraform {
-  required_providers {
-    digitalocean = {
-      source = "digitalocean/digitalocean"
-      version = "2.22.3"
-    }
-    github = {
-      source  = "integrations/github"
-      version = ">= 4.5.2"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = ">= 2.0.2"
-    }
-    kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = ">= 1.10.0"
-    }
-    flux = {
-      source  = "fluxcd/flux"
-      version = ">= 0.0.13"
-    }
-    tls = {
-      source  = "hashicorp/tls"
-      version = "3.1.0"
-    }
+# ======================= GITHUB =========================
+# 
+# SSH Deploy Key to use by Flux CD
+resource "tls_private_key" "main" {
+  algorithm   = "ECDSA"
+  ecdsa_curve = "P256"
+}
+
+resource "github_repository_deploy_key" "main" {
+  title      = var.cluster_name
+  repository = data.github_repository.main.name
+  key        = tls_private_key.main.public_key_openssh
+  read_only  = true
+}
+
+resource "github_repository_file" "install" {
+  repository = data.github_repository.main.name
+  file       = data.flux_install.main.path
+  content    = data.flux_install.main.content
+  branch     = var.git_repository_branch
+  overwrite_on_create = true
+}
+
+resource "github_repository_file" "sync" {
+  repository = data.github_repository.main.name
+  file       = data.flux_sync.main.path
+  content    = data.flux_sync.main.content
+  branch     = var.git_repository_branch
+  overwrite_on_create = true
+}
+
+resource "github_repository_file" "kustomize" {
+  repository = data.github_repository.main.name
+  file       = data.flux_sync.main.kustomize_path
+  content    = data.flux_sync.main.kustomize_content
+  branch     = var.git_repository_branch
+  overwrite_on_create = true
+}
+# =========================================================
+
+# ======================== DOKS ===========================
+resource "digitalocean_kubernetes_cluster" "primary" {
+  name    = var.cluster_name
+  region  = var.doks_cluster_region
+  version = data.digitalocean_kubernetes_versions.current.latest_version
+
+  node_pool {
+    name       = "${var.cluster_name}-pool"
+    size       = var.doks_cluster_pool_size
+    node_count = var.doks_cluster_pool_node_count
   }
 }
 
-# Configure the DigitalOcean Provider
-provider "digitalocean" {
-  token = var.do_token
-}
+# =========================== FLUX CD ===========================
+resource "kubernetes_namespace" "flux_system" {
+  metadata {
+    name = "flux-system"
+  }
 
-module "doks-cluster" {
-  source             = "./doks-cluster"
-  cluster_name       = "capstone-${var.cluster_name}"
-  cluster_region     = "tor1"
-  cluster_version    = var.cluster_version
-
-  worker_size        = var.worker_size
-  worker_count       = var.worker_count
-
-  providers = {
-    digitalocean = digitalocean
+  lifecycle {
+    ignore_changes = [
+      metadata[0].labels,
+      # metadata[0].annotations, # TODO: need to check if this one can be safely ignored
+    ]
   }
 }
 
-module "kubernetes-flux" {
-  source           = "./kubernetes-flux"
-  cluster_name     = module.doks-cluster.cluster_name
-  cluster_id       = module.doks-cluster.cluster_id
-  github_token     = var.github_token
-  github_owner     = "NET4901-Capstone"
-  repository_name  = "cluster-config"
-  target_path      = "clusters/${var.cluster_name}/base"
+resource "kubectl_manifest" "install" {
+  for_each   = { for v in local.install : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
+  depends_on = [kubernetes_namespace.flux_system]
+  yaml_body  = each.value
+}
 
-  write_kubeconfig = var.write_kubeconfig
+resource "kubectl_manifest" "sync" {
+  for_each   = { for v in local.sync : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
+  depends_on = [kubernetes_namespace.flux_system]
+  yaml_body  = each.value
+}
 
-  providers = {
-    digitalocean = digitalocean
+resource "kubernetes_secret" "main" {
+  depends_on = [kubectl_manifest.install]
+
+  metadata {
+    name      = data.flux_sync.main.secret
+    namespace = data.flux_sync.main.namespace
+  }
+
+  data = {
+    identity       = tls_private_key.main.private_key_pem
+    "identity.pub" = tls_private_key.main.public_key_pem
+    known_hosts    = "github.com ${var.github_ssh_pub_key}"
   }
 }
+# ==================================================================
