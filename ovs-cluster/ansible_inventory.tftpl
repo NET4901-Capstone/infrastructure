@@ -1,0 +1,9 @@
+[masters]
+%{ for host in masters ~}
+${host.ipv4_address} ansible_ssh_user=root
+%{ endfor ~}
+
+[workers]
+%{ for host in workers ~}
+${host.ipv4_address} ansible_ssh_user=root
+%{ endfor ~}

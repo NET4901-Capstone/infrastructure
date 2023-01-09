@@ -1,0 +1,27 @@
+- hosts: all
+  tasks:
+    - name: Update Package Cache (apt/Ubuntu)
+      tags: always
+      apt:
+        update_cache: yes
+      changed_when: false
+      when: ansible_distribution == "Ubuntu"
+    - name: Install OpenVSwitch
+      ansible.builtin.package:
+        name: openvswitch-switch
+        state: present
+  roles:
+    - prereq
+    - download
+
+- hosts: masters
+  become: true
+  gather_facts: no
+  roles:
+    - k3s/master
+
+- hosts: workers
+  become: true
+  gather_facts: no
+  roles:
+    - k3s/worker
