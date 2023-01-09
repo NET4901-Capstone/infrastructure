@@ -25,3 +25,13 @@
   gather_facts: no
   roles:
     - k3s/worker
+
+- hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Create OVS Bridge
+      command: ovs-vsctl add-br br0
+    - name: Create VXLAN interfaces
+      loop: "{{ groups['all']|difference([inventory_hostname]) }}"
+      command: ovs-vsctl add-port br0 vxlan-{{item.ansible_hostname}} -- set Interface vxlan type=vxlan options:remote_ip={{item.ansible_default_ipv4.address}}
