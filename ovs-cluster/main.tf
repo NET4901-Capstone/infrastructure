@@ -79,7 +79,7 @@ resource "local_file" "ssh_private_key" {
 
 resource "null_resource" "provision_cluster" {
     provisioner "local-exec" {
-        command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u root -i inventory/hosts --private-key id_rsa -e pub_key=id_rsa.pub cluster-init.yml"
+        command = "ansible-playbook -u root -i inventory/hosts --private-key id_rsa -e pub_key=id_rsa.pub cluster-init.yml"
     }
     depends_on = [
       local_file.ansible_inventory
