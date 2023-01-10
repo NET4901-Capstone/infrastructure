@@ -1,0 +1,40 @@
+- name: initialize the cluster
+  shell: kubeadm init --pod-network-cidr=10.244.0.0/16 >> cluster_initialized.txt || rm -f cluster_initialized.txt
+  args:
+    chdir: $HOME
+    creates: cluster_initialized.txt
+
+- name: create .kube directory
+  become: yes
+  file:
+    path: $HOME/.kube
+    state: directory
+    mode: 0755
+
+- name: copies admin.conf to user's kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: $HOME/.kube/config
+    remote_src: true
+
+- name: wait for apiserver
+  wait_for:
+    port: 6443
+
+- name: install Pod network
+  become: yes
+  shell: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/v0.20.2/Documentation/kube-flannel.yml
+  args:
+    chdir: $HOME
+    
+- name: Get the token for joining the worker nodes
+  become: yes
+  shell: kubeadm token create  --print-join-command
+  register: kubernetes_join_command
+
+- name: Set token fact
+  set_fact:
+    join_command: "{{ kubernetes_join_command.stdout_lines[0] }}"
+
+- debug:
+    msg: "{{ kubernetes_join_command.stdout }}"

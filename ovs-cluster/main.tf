@@ -31,12 +31,12 @@ resource "digitalocean_ssh_key" "default" {
   public_key = tls_private_key.do-ssh-key.public_key_openssh
 }
 
-resource "digitalocean_droplet" "cluster_nodes" {
-  count  = 3
+resource "digitalocean_droplet" "master_nodes" {
+  count  = 1
   image  = "ubuntu-22-04-x64"
-  name   = "cluster-${count.index}"
+  name   = "cluster-master-${count.index}"
   region = "tor1"
-  size   = "s-1vcpu-1gb"
+  size   = "s-2vcpu-4gb"
 
   ssh_keys = [
       digitalocean_ssh_key.default.id
@@ -54,15 +54,31 @@ resource "digitalocean_droplet" "cluster_nodes" {
   }
 }
 
-output "droplet_ip_addresses" {
-  value = {
-    for droplet in digitalocean_droplet.cluster_nodes:
-    droplet.name => droplet.ipv4_address
+resource "digitalocean_droplet" "worker_nodes" {
+  count  = 2
+  image  = "ubuntu-22-04-x64"
+  name   = "cluster-worker-${count.index}"
+  region = "tor1"
+  size   = "s-2vcpu-4gb"
+
+  ssh_keys = [
+      digitalocean_ssh_key.default.id
+  ]
+
+  provisioner "remote-exec" {
+    inline = ["echo \"SSH READY!\""]
+
+    connection {
+      host        = self.ipv4_address
+      type        = "ssh"
+      user        = "root"
+      private_key = tls_private_key.do-ssh-key.private_key_openssh
+    }
   }
 }
 
 resource "local_file" "ansible_inventory" {
-    content = templatefile("${path.module}/ansible_inventory.tftpl", { masters = slice(digitalocean_droplet.cluster_nodes, 0, 1), workers = slice(digitalocean_droplet.cluster_nodes, 1, length(digitalocean_droplet.cluster_nodes)) })
+    content = templatefile("${path.module}/ansible_inventory.tftpl", { masters = digitalocean_droplet.master_nodes, workers = digitalocean_droplet.worker_nodes })
     filename = "${path.module}/inventory/hosts"
 }
 
@@ -88,7 +104,7 @@ resource "null_resource" "provision_cluster" {
 
 data "remote_file" "kubeconfig" {
   conn {
-    host        = digitalocean_droplet.cluster_nodes.0.ipv4_address
+    host        = digitalocean_droplet.master_nodes.0.ipv4_address
     port        = 22
     user        = "root"
     private_key = tls_private_key.do-ssh-key.private_key_openssh
@@ -118,8 +134,8 @@ provider "kubernetes" {
 # Kubernetes stuff goes here
 # ####################################################
 
-resource "kubernetes_namespace" "test_namespace" {
-  metadata {
-    name = "test-namespace"
-  }
-}
+# resource "kubernetes_namespace" "test_namespace" {
+#   metadata {
+#     name = "test-namespace"
+#   }
+# }

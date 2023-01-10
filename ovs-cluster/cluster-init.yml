@@ -1,37 +1,42 @@
 - hosts: all
   tasks:
-    - name: Update Package Cache (apt/Ubuntu)
-      tags: always
-      apt:
-        update_cache: yes
-      changed_when: false
-      when: ansible_distribution == "Ubuntu"
     - name: Install OpenVSwitch
-      ansible.builtin.package:
+      apt:
         name: openvswitch-switch
+        update_cache: true
         state: present
+      when: ansible_distribution == "Ubuntu"
+      retries: 3
   roles:
     - prereq
-    - download
 
 - hosts: masters
   become: true
   gather_facts: no
   roles:
-    - k3s/master
+    - k8s/master
 
 - hosts: workers
   become: true
   gather_facts: no
   roles:
-    - k3s/worker
+    - k8s/worker
 
 - hosts: all
   become: true
   gather_facts: no
   tasks:
     - name: Create OVS Bridge
-      command: ovs-vsctl add-br br0
+      command: ovs-vsctl add-br br1
+      register: create_br_result
+      changed_when: '"already exists" not in create_br_result.stderr'
+      failed_when: create_br_result.rc != 0 and "already exists" not in create_br_result.stderr
+
     - name: Create VXLAN interfaces
       loop: "{{ groups['all']|difference([inventory_hostname]) }}"
-      command: ovs-vsctl add-port br0 vxlan-{{item.ansible_hostname}} -- set Interface vxlan type=vxlan options:remote_ip={{item.ansible_default_ipv4.address}}
+      loop_control:
+        index_var: index
+      command: ovs-vsctl add-port br1 vxlan-{{index}} -- set Interface vxlan-{{index}} type=vxlan options:remote_ip={{item}}
+      register: create_vxlan_result
+      changed_when: '"already exists" not in create_vxlan_result.stderr'
+      failed_when: create_vxlan_result.rc != 0 and "already exists" not in create_vxlan_result.stderr
