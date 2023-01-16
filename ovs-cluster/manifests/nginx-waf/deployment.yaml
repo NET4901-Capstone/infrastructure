@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-waf
+spec:
+  selector:
+    matchLabels:
+      app: nginx-waf
+  template:
+    metadata:
+      labels:
+        app: nginx-waf
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[{"name": "ovs-br1","ips": ["192.168.1.3/24"]}]'
+    spec:
+      containers:
+        - name: nginx-waf
+          image: owasp/modsecurity-crs:nginx
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: /etc/nginx/conf.d/waf.conf
+              name: nginx-config
+              subPath: waf.conf
+              readOnly: true
+          env:
+            - name: PROXY
+              value: "1"
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+            items:
+              - key: waf.conf
+                path: waf.conf

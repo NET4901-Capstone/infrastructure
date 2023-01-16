@@ -32,8 +32,25 @@
       changed_when: '"already exists" not in create_br_result.stderr'
       failed_when: create_br_result.rc != 0 and "already exists" not in create_br_result.stderr
 
+- hosts: masters
+  become: true
+  gather_facts: no
+  tasks:
     - name: Create VXLAN interfaces
-      loop: "{{ groups['all']|difference([inventory_hostname]) }}"
+      loop: "{{ groups['workers'] }}"
+      loop_control:
+        index_var: index
+      command: ovs-vsctl add-port br1 vxlan-{{index}} -- set Interface vxlan-{{index}} type=vxlan options:remote_ip={{item}}
+      register: create_vxlan_result
+      changed_when: '"already exists" not in create_vxlan_result.stderr'
+      failed_when: create_vxlan_result.rc != 0 and "already exists" not in create_vxlan_result.stderr
+
+- hosts: workers
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Create VXLAN interfaces
+      loop: "{{ groups['masters'] }}"
       loop_control:
         index_var: index
       command: ovs-vsctl add-port br1 vxlan-{{index}} -- set Interface vxlan-{{index}} type=vxlan options:remote_ip={{item}}

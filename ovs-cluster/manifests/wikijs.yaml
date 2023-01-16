@@ -1,0 +1,93 @@
+---
+# Source: app-template/templates/common.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: wikijs
+  labels:
+    app.kubernetes.io/service: wikijs
+    app.kubernetes.io/instance: wikijs
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: wikijs
+    helm.sh/chart: app-template-1.2.1
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/instance: wikijs
+    app.kubernetes.io/name: wikijs
+---
+# Source: app-template/templates/common.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wikijs
+  labels:
+    app.kubernetes.io/instance: wikijs
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: wikijs
+    helm.sh/chart: app-template-1.2.1
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wikijs
+      app.kubernetes.io/instance: wikijs
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wikijs
+        app.kubernetes.io/instance: wikijs
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[{"name": "ovs-br1","ips": ["192.168.1.2/24"]}]'
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: true
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      containers:
+        - name: wikijs
+          image: "ghcr.io/linuxserver/wikijs:version-2.5.201"
+          imagePullPolicy:
+          env:
+            - name: TZ
+              value: America/Toronto
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 0
+            failureThreshold: 3
+            timeoutSeconds: 1
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 0
+            failureThreshold: 3
+            timeoutSeconds: 1
+            periodSeconds: 10
+          startupProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 0
+            failureThreshold: 30
+            timeoutSeconds: 1
+            periodSeconds: 5
+          resources:
+            limits:
+              memory: 500Mi
+            requests:
+              cpu: 10m
+              memory: 100Mi

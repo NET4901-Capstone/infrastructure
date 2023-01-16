@@ -9,6 +9,7 @@ spec:
       "cniVersion": "0.4.0",
       "type": "ovs",
       "bridge": "br1",
+      "mtu": 1450,
       "ipam": {
           "type": "static"
         }
