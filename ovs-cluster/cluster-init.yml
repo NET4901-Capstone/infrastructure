@@ -57,3 +57,11 @@
       register: create_vxlan_result
       changed_when: '"already exists" not in create_vxlan_result.stderr'
       failed_when: create_vxlan_result.rc != 0 and "already exists" not in create_vxlan_result.stderr
+
+- hosts: workers
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Configure OVS Controller
+      loop: "{{ groups['masters'] }}"
+      command: ovs-vsctl set-controller br1 tcp:{{item}}:6633
