@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: iptables-daemonset
+spec:
+  selector:
+    matchLabels:
+      app: iptables
+  template:
+    metadata:
+      labels:
+        app: iptables
+    spec:
+      hostNetwork: true
+      containers:
+      - name: iptables
+        image: <your-image-name>:<image-version>
+        securityContext:
+          privileged: true
+        command: ["/bin/sh", "-c", "iptables <your-rules>"]
