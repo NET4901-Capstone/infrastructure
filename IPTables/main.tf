@@ -59,6 +59,7 @@ resource "digitalocean_kubernetes_cluster" "test-cluster" {
     node_count = 3
   }
 }
+
 provider "kubernetes" {
     host = data.digitalocean_kubernetes_cluster.test-cluster.endpoint
     cluster_ca_certificate = base64decode(data.digitalocean_kubernetes_cluster.test-cluster.kube_config[0].cluster_ca_certificate)
@@ -71,14 +72,3 @@ provider "kubernetes" {
     }
 }
 
-data "template_file" "cilium" {
-  template = file("cilium.yaml")
-}
-
-resource "kubernetes_manifest" "cilium" {
-  content = data.template_file.cilium.rendered
-}
-
-output "cluster-id" {
-  value = digitalocean_kubernetes_cluster.test-cluster.id
-}
