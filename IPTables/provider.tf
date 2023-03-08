@@ -36,10 +36,14 @@ provider "digitalocean" {
 }
 
 provider "kubernetes" {
-    host = data.digitalocean_kubernetes_cluster.test-cluster.endpoint
-    cluster_ca_certificate = base64decode(data.digitalocean_kubernetes_cluster.test-cluster.kube_config[0].cluster_ca_certificate)
+    host = data.digitalocean_kubernetes_cluster.primary.endpoint
+    cluster_ca_certificate = base64decode(data.digitalocean_kubernetes_cluster.primary.kube_config[0].cluster_ca_certificate)
 
-  exec {
+    client_key = base64decode(data.digitalocean_kubernetes_cluster.primary.kube_config[0].client_key)
+
+    client_certificate = base64decode(data.digitalocean_kubernetes_cluster.primary.kube_config[0].client_certificate)
+
+    exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "doctl"
     args = ["kubernetes", "cluster", "kubeconfig", "exec-credential",
@@ -48,10 +52,13 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes {
-    host     = "https://cluster_endpoint:port"
-    client_certificate     = file("~/.kube/client-cert.pem")
-    client_key             = file("~/.kube/client-key.pem")
-    cluster_ca_certificate = base64decode(data.digitalocean_kubernetes_cluster.test-cluster.kube_config[0].cluster_ca_certificate)
-  }
+    kubernetes {  
+    host = data.digitalocean_kubernetes_cluster.primary.endpoint
+    
+    cluster_ca_certificate = base64decode(data.digitalocean_kubernetes_cluster.primary.kube_config[0].cluster_ca_certificate)
+    
+    client_key = base64decode(data.digitalocean_kubernetes_cluster.primary.kube_config[0].client_key)
+    
+    client_certificate = base64decode(data.digitalocean_kubernetes_cluster.primary.kube_config[0].client_certificate)
+    }
 }
