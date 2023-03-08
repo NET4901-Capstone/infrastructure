@@ -1,9 +1,3 @@
-resource "digitalocean_certificate" "cert" {
-  name = "kuma"
-  type = "lets_encrypt"
-  domains = ["kumacluster.com"]
-}
-
 resource "digitalocean_kubernetes_cluster" "primary" {
   name = "kumacluster"
   region = "tor1"
@@ -18,7 +12,8 @@ resource "digitalocean_kubernetes_cluster" "primary" {
 
 resource "helm_release" "kuma" {
    name = "kuma"
-   chart = "kumahq"
+   version = "2.0.0"
+   chart = "kuma"
    repository = "https://kumahq.github.io/charts"
-   wait = true
+   wait = false
 }
