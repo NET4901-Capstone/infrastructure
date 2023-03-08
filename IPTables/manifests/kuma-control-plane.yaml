@@ -1,0 +1,20 @@
+apiVersion: kuma.io/v1alpha1
+kind: ControlPlane
+metadata:
+  name: kuma-control-plane
+  namespace: kuma-system
+spec:
+  components:
+    - name: gui
+      enabled: true
+    - name: prometheus
+      enabled: true
+    - name: tracing
+      enabled: true
+  ingress:
+    address: kuma-control-plane.kuma-system.svc.cluster.local
+    gateway:
+      mode: "local"
+  monitoring:
+    enabledBackend: prometheus
+

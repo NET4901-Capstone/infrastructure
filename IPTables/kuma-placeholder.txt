@@ -1,0 +1,48 @@
+provider "helm" {
+    kubernetes {
+      config_path = "~/.kube/config"
+    }
+}
+resource "helm_release" "kuma" {
+  name       = "kuma"
+  repository = "https://kumahq.github.io/charts"
+  chart      = "kuma"
+  version    = "1.4.3"
+
+  set {
+    name  = "global.controlPlane.envoyLogLevel"
+    value = "debug"
+  }
+
+  set {
+    name  = "global.controlPlane.image.registry"
+    value = "kong-docker-kuma-docker.bintray.io"
+  }
+
+  set {
+    name  = "global.controlPlane.image.tag"
+    value = "1.4.3"
+  }
+}
+
+resource "kuma_mesh" "default" {
+  name = "default"
+}
+
+resource "kuma_dataplane" "nginx" {
+  name         = "nginx"
+  mesh         = kuma_mesh.default.name
+  proxy_config = jsonencode({
+    "dataplaneTokenPath": "/var/run/secrets/kuma.io/service-account-token",
+    "adminPort": 9901,
+    "ingress": {
+      "address": "nginx-service.default.svc.cluster.local",
+      "port": 80
+    }
+  })
+
+  selectors = {
+    "app": "nginx"
+  }
+}
+
