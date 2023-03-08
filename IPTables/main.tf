@@ -36,8 +36,6 @@ provider "digitalocean" {
   token = var.do_token
 }
 
-provider "tls" {}
-
 resource "tls_private_key" "do-ssh-key" {
   algorithm = "RSA"
   rsa_bits  = 4096
@@ -48,10 +46,10 @@ resource "digitalocean_ssh_key" "cluster_key" {
     public_key = tls_private_key.do-ssh-key.public_key_openssh
 }
 
-resource "digitalocean_kubernetes_cluster" "test-cluster" {
-  name = "test-cluster"
+resource "digitalocean_kubernetes_cluster" "testcluster" {
+  name = "testcluster"
   region = "tor1"
-  version = "1.23.14-do.0"	
+  version = "1.25.4-do.0"	
 
   node_pool {
     name = "default"
@@ -71,4 +69,3 @@ provider "kubernetes" {
     "--version=v1beta1", data.digitalocean_kubernetes_cluster.test-cluster.id]
     }
 }
-
