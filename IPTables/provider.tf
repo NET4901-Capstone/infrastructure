@@ -53,4 +53,18 @@ provider "helm" {
     cluster_ca_certificate = base64decode(digitalocean_kubernetes_cluster.primary.kube_config[0].cluster_ca_certificate)
     token = digitalocean_kubernetes_cluster.primary.kube_config[0].token
     }
+
+    set {
+        name = "cluster.enabled"
+        value = "true"
+    }
+    set {
+        name = "metrics.enabled"
+        value = "true"
+    }
+    set {
+        name = "service.annotations.prometheus\\.io/port"
+        value = "9127"
+        type = "string"
+    }
 }
