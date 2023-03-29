@@ -1,0 +1,9 @@
+[Interface]
+PrivateKey = ${peer.private_key}
+Address = ${peer.ip}/32
+
+[Peer]
+PublicKey = ${server.public_key}
+AllowedIPs = 10.8.0.0/24
+Endpoint = vpn.kuberbitnetes.xyz:51820
+PersistentKeepalive = 25
