@@ -1,11 +1,11 @@
 terraform {
   backend "s3" {
-    endpoint = "https://s3.us-west-004.backblazeb2.com"
-    bucket = "bitnet-capstone"
+    endpoint = ""
+    bucket = ""
     key    = "terraform/state.json"
     region = "us-west-004"
-    access_key = "0040b1450c0a9bc0000000006"
-    secret_key = "K004OQkXrYDMdXkt3KQY7v9Y0zc9Q9s"
+    access_key = ""
+    secret_key = ""
     skip_credentials_validation = true
     skip_region_validation      = true
   }
